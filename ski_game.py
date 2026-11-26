@@ -22,11 +22,11 @@ def get_key():
     return key.lower()
 
 
-def start_game():
+def start_game(best_score=0):
     return {"player_x": WIDTH // 2, "direction": 1, "distance": 0,
             "speed": START_INTERVAL, "alive": True, "running": False,
             "field": [" " * WIDTH for _ in range(HEIGHT)], "score": 0,
-            "game_over_reason": ""}
+            "best_score": best_score, "game_over_reason": ""}
 
 
 def make_row(distance):
@@ -56,6 +56,7 @@ def update_game(game):
     game["field"].insert(0, make_row(game["distance"]))
     game["distance"] += 1
     game["score"] = game["distance"] * 10
+    game["best_score"] = max(game["best_score"], game["score"])
     game["speed"] = max(MIN_INTERVAL, START_INTERVAL - game["distance"] * 0.001)
     tile = game["field"][HEIGHT - 1][game["player_x"]]
     if tile != " ":
@@ -73,7 +74,8 @@ def draw_game(game):
             line[game["player_x"]] = "O" if game["alive"] else "X"
         print("|" + "".join(line) + "|")
     print("+" + "-" * WIDTH + "+")
-    print(f"距離 {game['distance']:<5} 得点 {game['score']:<6} 速度 {1/game['speed']:.1f}行/秒    ")
+    print(f"距離 {game['distance']:<5} 得点 {game['score']:<6} "
+          f"最高得点 {game['best_score']:<6} 速度 {1/game['speed']:.1f}行/秒    ")
     status = (f"ゲームオーバー：{game['game_over_reason']} [R]でリスタート" if not game["alive"]
           else "滑走中" if game["running"]
           else "一時停止中 [Space]で再開" if game["distance"] > 0
@@ -97,7 +99,7 @@ def main():
             if key in ("q", "\x1b"):
                 break
             if key == "r":
-                game = start_game()
+                game = start_game(game["best_score"])
             elif key == " ":
                 if game["alive"]:
                     game["running"] = not game["running"]
