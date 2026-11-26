@@ -71,7 +71,9 @@ def draw_game(game):
     print("+" + "-" * WIDTH + "+")
     print(f"距離 {game['distance']:<5} 得点 {game['score']:<6} 速度 {1/game['speed']:.1f}行/秒    ")
     status = ("ゲームオーバー [R]でリスタート" if not game["alive"]
-          else "滑走中" if game["running"] else "[Space]でスタート")
+          else "滑走中" if game["running"]
+          else "一時停止中 [Space]で再開" if game["distance"] > 0
+          else "[Space]でスタート")
     print(status.ljust(WIDTH + 22))
     print("← →: 方向変更  Space: 開始/停止  R: 再開  Q: 終了".ljust(WIDTH + 22))
     sys.stdout.flush()
