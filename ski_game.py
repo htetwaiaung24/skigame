@@ -1,6 +1,7 @@
 """ASCIIスキー：リアルタイム入力とスクロールを学ぶ教材。Windows端末用。"""
 import os
 import random
+import shutil
 import sys
 import time
 
@@ -65,23 +66,42 @@ def update_game(game):
 
 
 def draw_game(game):
-    # ANSIのカーソル移動で画面を上書きする。Windows Terminal/VS Code推奨。
-    sys.stdout.write("\x1b[H")
-    print("=== ASCII SKI ===".ljust(WIDTH + 2))
-    for y in range(HEIGHT):
-        line = list(game["field"][y])
+    columns, rows = shutil.get_terminal_size()
+    lines = ["=== ASCII SKI ==="]
+
+    for y, row in enumerate(game["field"]):
+        line = list(row)
         if y == HEIGHT - 1:
             line[game["player_x"]] = "O" if game["alive"] else "X"
-        print("|" + "".join(line) + "|")
-    print("+" + "-" * WIDTH + "+")
-    print(f"距離 {game['distance']:<5} 得点 {game['score']:<6} "
-          f"最高得点 {game['best_score']:<6} 速度 {1/game['speed']:.1f}行/秒    ")
-    status = (f"ゲームオーバー：{game['game_over_reason']} [R]でリスタート" if not game["alive"]
-          else "滑走中" if game["running"]
-          else "一時停止中 [Space]で再開" if game["distance"] > 0
-          else "[Space]でスタート")
-    print(status.ljust(WIDTH + 22))
-    print("← →: 方向変更  Space: 開始/停止  R: 再開  Q: 終了".ljust(WIDTH + 22))
+        lines.append("|" + "".join(line) + "|")
+
+    lines.append("+" + "-" * WIDTH + "+")
+    lines.append(
+        f"距離 {game['distance']}  得点 {game['score']}  "
+        f"最高得点 {game['best_score']}  速度 {1/game['speed']:.1f}行/秒"
+    )
+
+    if not game["alive"]:
+        status = f"ゲームオーバー：{game['game_over_reason']} [R]でリスタート"
+    elif game["running"]:
+        status = "滑走中"
+    elif game["distance"] > 0:
+        status = "一時停止中 [Space]で再開"
+    else:
+        status = "[Space]でスタート"
+
+    lines.append(status)
+    lines.append("← →: 方向変更  Space: 開始/停止  R: リスタート  Q: 終了")
+
+    if columns < 60 or rows < len(lines):
+        lines = ["ターミナルを広げてください（横60文字・縦21行以上）"]
+
+    # 指定した行の先頭に書き、右側に残っている古い文字を消す
+    for y, line in enumerate(lines, start=1):
+        sys.stdout.write(f"\x1b[{y};1H{line}\x1b[K")
+
+    # 最後の行より下に残っている古い表示も消す
+    sys.stdout.write("\x1b[J")
     sys.stdout.flush()
 
 
@@ -92,7 +112,7 @@ def main():
     # Windows 10/11のVS Code内蔵ターミナルを想定
     os.system("")
     game = start_game()
-    sys.stdout.write("\x1b[2J\x1b[?25l")
+    sys.stdout.write("\x1b[?1049h\x1b[2J\x1b[?7l\x1b[?25l")
     try:
         while True:
             key = get_key()
@@ -112,7 +132,7 @@ def main():
             draw_game(game)
             time.sleep(game["speed"] if game["running"] else 0.08)
     finally:
-        sys.stdout.write("\x1b[?25h\n")
+        sys.stdout.write("\x1b[?7h\x1b[?25h\x1b[?1049l")
         sys.stdout.flush()
 
 
