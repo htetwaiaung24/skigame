@@ -27,7 +27,8 @@ def start_game(best_score=0):
     return {"player_x": WIDTH // 2, "direction": 1, "distance": 0,
             "speed": START_INTERVAL, "alive": True, "running": False,
             "field": [" " * WIDTH for _ in range(HEIGHT)], "score": 0,
-            "best_score": best_score, "game_over_reason": ""}
+            "best_score": best_score, "game_over_reason": "",
+            "shield": False}
 
 
 def make_row(distance):
@@ -40,6 +41,9 @@ def make_row(distance):
         pos = random.randrange(WIDTH)
         if row[pos] == " ":
             row[pos] = "A"
+        if random.random() < 0.08:
+            empty_cells = [i for i, tile in enumerate(row) if tile == " "]
+            row[random.choice(empty_cells)] = "S"
     return "".join(row)
 
 
@@ -58,21 +62,34 @@ def update_game(game):
     game["distance"] += 1
     game["score"] = game["distance"] * 10
     game["best_score"] = max(game["best_score"], game["score"])
-    game["speed"] = max(MIN_INTERVAL, START_INTERVAL - game["distance"] * 0.001)
+    game["speed"] = max(MIN_INTERVAL, START_INTERVAL - game["distance"] * 0.0005)
     tile = game["field"][HEIGHT - 1][game["player_x"]]
-    if tile != " ":
+    if tile == "S":
+        game["shield"] = True
+    elif tile == "A" and game["shield"]:
+        game["shield"] = False
+    elif tile != " ":
         game["alive"] = False
-        game["game_over_reason"] = "木にぶつかりました" if tile == "A" else "崖に落ちました"
+        game["game_over_reason"] = (
+            "木にぶつかりました" if tile == "A" else "崖に落ちました"
+        )
 
 
 def draw_game(game):
     columns, rows = shutil.get_terminal_size()
-    lines = ["=== ASCII SKI ==="]
+    shield_status = "ON" if game["shield"] else "OFF"
+    lines = [f"=== ASCII SKI ===  Shield: {shield_status}"]
 
     for y, row in enumerate(game["field"]):
         line = list(row)
         if y == HEIGHT - 1:
-            line[game["player_x"]] = "O" if game["alive"] else "X"
+            if not game["alive"]:
+                player = "X"
+            elif game["shield"]:
+                player = "Q"
+            else:
+                player = "O"
+            line[game["player_x"]] = player
         lines.append("|" + "".join(line) + "|")
 
     lines.append("+" + "-" * WIDTH + "+")
